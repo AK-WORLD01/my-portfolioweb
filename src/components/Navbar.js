@@ -1,4 +1,3 @@
-
 import { motion, AnimatePresence } from 'framer-motion';
 import { useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeContext } from '../App';
@@ -6,7 +5,7 @@ import { Container, Navbar, Nav } from 'react-bootstrap';
 import { debounce } from 'lodash';
 
 function NavigationBar() {
-  const { theme, toggleTheme } = useContext(ThemeContext);
+  const { theme, toggleTheme, setTheme } = useContext(ThemeContext);
   const [activeLink, setActiveLink] = useState('home');
   const [scrolled, setScrolled] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -22,7 +21,22 @@ function NavigationBar() {
     { id: 'contact', label: 'Contact' },
   ];
 
-  // Enhanced underline position updater with useCallback
+  // Auto-detect system theme
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => {
+      setTheme(e.matches ? 'dark' : 'light');
+    };
+
+    // Set initial theme
+    setTheme(mediaQuery.matches ? 'dark' : 'light');
+    
+    // Listen for system theme changes
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [setTheme]);
+
+  // Enhanced underline position updater
   const updateUnderline = useCallback(
     (linkId = activeLink) => {
       const activeRef = navRefs.current[linkId];
@@ -40,10 +54,9 @@ function NavigationBar() {
     [activeLink]
   );
 
-  // Wrap with debounce outside useCallback
   const debouncedUpdateUnderline = debounce(updateUnderline, 50);
 
-  // Improved scroll handler
+  // Scroll handler
   useEffect(() => {
     const handleScroll = debounce(() => {
       setScrolled(window.scrollY > 50);
@@ -75,13 +88,12 @@ function NavigationBar() {
     };
   }, [activeLink, debouncedUpdateUnderline]);
 
-  // Initialize and handle resize
+  // Resize handler
   useEffect(() => {
     const handleResize = debounce(() => {
       debouncedUpdateUnderline();
     }, 100);
 
-    // Initial update after everything renders
     const timer = setTimeout(() => {
       debouncedUpdateUnderline();
     }, 300);
@@ -103,7 +115,7 @@ function NavigationBar() {
     }
   };
 
-  // Dynamic styles
+  // Responsive styles
   const getStyles = () => ({
     navbar: {
       position: 'fixed',
@@ -125,9 +137,10 @@ function NavigationBar() {
     navLink: {
       color: theme === 'dark' ? '#e0e0ff' : '#1a1a2e',
       fontWeight: 500,
-      padding: '0.5rem 1rem',
+      padding: window.innerWidth < 768 ? '0.75rem 1rem' : '0.5rem 1rem',
       position: 'relative',
       transition: 'color 0.3s ease',
+      fontSize: window.innerWidth < 768 ? '1.1rem' : '1rem',
     },
     activeLink: {
       color: theme === 'dark' ? '#00ccff' : '#4B5EAA',
@@ -142,12 +155,12 @@ function NavigationBar() {
         : 'linear-gradient(90deg, #4B5EAA, #7B8CDE)',
       borderRadius: '3px',
       transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-      opacity: 0,
+      opacity: window.innerWidth < 992 ? 0 : 1, // Hide underline on mobile
     },
     themeToggle: {
-      width: '60px',
-      height: '30px',
-      borderRadius: '15px',
+      width: window.innerWidth < 768 ? '50px' : '60px',
+      height: window.innerWidth < 768 ? '25px' : '30px',
+      borderRadius: window.innerWidth < 768 ? '12px' : '15px',
       background: theme === 'dark'
         ? 'rgba(128, 0, 255, 0.2)'
         : 'rgba(0, 0, 0, 0.1)',
@@ -156,22 +169,23 @@ function NavigationBar() {
     },
     toggleCircle: {
       position: 'absolute',
-      width: '24px',
-      height: '24px',
+      width: window.innerWidth < 768 ? '20px' : '24px',
+      height: window.innerWidth < 768 ? '20px' : '24px',
       borderRadius: '50%',
       background: theme === 'dark' ? '#e0e0ff' : '#4B5EAA',
-      top: '3px',
+      top: window.innerWidth < 768 ? '2.5px' : '3px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       transition: 'transform 0.3s ease',
+      fontSize: window.innerWidth < 768 ? '0.9rem' : '1rem',
     },
     hamburgerLine: {
       display: 'block',
-      width: '25px',
+      width: window.innerWidth < 768 ? '20px' : '25px',
       height: '3px',
       background: theme === 'dark' ? '#e0e0ff' : '#1a1a2e',
-      margin: '4px 0',
+      margin: window.innerWidth < 768 ? '3px 0' : '4px 0',
       transition: 'all 0.3s ease',
     },
   });
@@ -190,6 +204,27 @@ function NavigationBar() {
               .map(([key, value]) => `${key}: ${value};`)
               .join(' ')}
           }
+          @media (max-width: 991px) {
+            .nav-underline {
+              display: none;
+            }
+            .nav-link {
+              padding: 0.75rem 1.5rem !important;
+            }
+          }
+          @media (max-width: 767px) {
+            .navbar-brand {
+              font-size: 1.1rem !important;
+            }
+            .navbar {
+              padding: ${scrolled ? '0.3rem 0' : '0.5rem 0'} !important;
+            }
+          }
+          @media (min-width: 992px) {
+            .mobile-menu {
+              display: none;
+            }
+          }
           @keyframes underlinePulse {
             0% { transform: scaleX(1); }
             50% { transform: scaleX(1.05); }
@@ -205,7 +240,7 @@ function NavigationBar() {
         expand="lg"
         expanded={expanded}
         style={styles.navbar}
-        className="px-3 px-lg-5"
+        className="px-2 px-sm-3 px-md-4 px-lg-5"
       >
         <Container fluid>
           <Navbar.Brand
@@ -213,7 +248,7 @@ function NavigationBar() {
             style={{
               color: theme === 'dark' ? '#e0e0ff' : '#1a1a2e',
               fontWeight: 600,
-              fontSize: '1.25rem',
+              fontSize: window.innerWidth < 768 ? '1.1rem' : '1.25rem',
             }}
             onClick={(e) => {
               e.preventDefault();
@@ -228,7 +263,7 @@ function NavigationBar() {
             onClick={() => setExpanded(!expanded)}
             style={{ border: 'none', background: 'transparent' }}
           >
-            <div style={{ padding: '5px' }}>
+            <div style={{ padding: window.innerWidth < 768 ? '3px' : '5px' }}>
               <span
                 style={{
                   ...styles.hamburgerLine,
@@ -278,7 +313,6 @@ function NavigationBar() {
                 </div>
               ))}
 
-              {/* Enhanced Dynamic Underline */}
               <div
                 ref={underlineRef}
                 className="nav-underline"
@@ -289,18 +323,19 @@ function NavigationBar() {
                 }}
               />
 
-              {/* Theme Toggle */}
               <div
                 style={{
                   ...styles.themeToggle,
-                  marginLeft: '1.5rem',
+                  marginLeft: window.innerWidth < 768 ? '1rem' : '1.5rem',
                 }}
                 onClick={toggleTheme}
               >
                 <div
                   style={{
                     ...styles.toggleCircle,
-                    transform: theme === 'dark' ? 'translateX(32px)' : 'translateX(3px)',
+                    transform: theme === 'dark' ? 
+                      `translateX(${window.innerWidth < 768 ? '27px' : '32px'})` : 
+                      'translateX(3px)',
                   }}
                 >
                   {theme === 'dark' ? '☀️' : '🌙'}
@@ -311,16 +346,16 @@ function NavigationBar() {
         </Container>
       </Navbar>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {expanded && (
           <motion.div
+            className="mobile-menu"
             initial={{ opacity: 0, height: '0' }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: '0' }}
             style={{
               position: 'fixed',
-              top: '70px',
+              top: window.innerWidth < 768 ? '50px' : '70px',
               left: 0,
               right: 0,
               zIndex: 999,
@@ -332,20 +367,19 @@ function NavigationBar() {
             }}
           >
             <Container style={{ padding: '1rem 0' }}>
-              {navLinks.map((link) => (
+              {navLinks.map((link, index) => (
                 <motion.div
                   key={link.id}
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  style={{ padding: '0.75rem 1.5rem' }}
+                  transition={{ duration: 0.2, delay: index * 0.1 }}
+                  style={{ padding: window.innerWidth < 768 ? '0.5rem 1rem' : '0.75rem 1.5rem' }}
                 >
                   <Nav.Link
                     href={`#${link.id}`}
                     style={{
                       ...styles.navLink,
-                      fontSize: '1.1rem',
                       ...(activeLink === link.id ? styles.activeLink : {}),
                     }}
                     className={activeLink === link.id ? 'active-nav-link' : ''}
